@@ -49,7 +49,9 @@ fi
 unset rc
 
 # --- STARTUP PROGRAMS ---
-fastfetch --logo /home/george/Pictures/FastfetchArt/ascii-dragon
+if command -v fastfetch >/dev/null 2>&1; then
+  fastfetch --logo "$HOME/Pictures/FastfetchArt/ascii-dragon" 2>/dev/null
+fi
 # Use 1password CLI if available
 if [ -d $HOME/.config/op/plugins.sh ]; then
     source $HOME/.config/op/plugins.sh
