@@ -1,0 +1,56 @@
+# ~/.bashrc: executes by bash for non-login shells.
+
+# --- SETUP ---
+# Source global definitions
+if [ -f /etc/bashrc ]; then
+    . /etc/bashrc
+fi
+
+# User specific environment
+if ! [[ "$PATH" =~ "$HOME/.local/bin:$HOME/bin:" ]]; then
+    PATH="$HOME/.local/bin:$HOME/bin:$PATH"
+fi
+export PATH
+
+# --- BASH HISTORY ---
+HISTCONTROL=ignoreboth  # don't put duplicate lines or lines starting with space in the history.
+shopt -s histappend  # append to the history file, don't overwrite it
+HISTSIZE=1000  # set max history file size
+HISTFILESIZE=2000  # set max history file length
+
+# --- AESTHETICS ---
+# check window size after each command and, if needed, update the values of LINES and COLUMNS.
+shopt -s checkwinsize
+
+# --- UTILITIES ---
+# enable programmable completion features (you don't need to enable
+# this, if it's already enabled in /etc/bash.bashrc and /etc/profile
+# sources /etc/bash.bashrc).
+if ! shopt -oq posix; then
+  if [ -f /usr/share/bash-completion/bash_completion ]; then
+    . /usr/share/bash-completion/bash_completion
+  elif [ -f /etc/bash_completion ]; then
+    . /etc/bash_completion
+  fi
+fi
+
+# Allow vi keybinds to be used directly in terminal
+set -o vi
+
+# --- ALIASES ---
+# User specific aliases and functions
+if [ -d ~/.bashrc.d ]; then
+    for rc in ~/.bashrc.d/*; do
+        if [ -f "$rc" ]; then
+            . "$rc"
+        fi
+    done
+fi
+unset rc
+
+# --- STARTUP PROGRAMS ---
+fastfetch --logo /home/george/Pictures/FastfetchArt/ascii-dragon
+# Use 1password CLI if available
+if [ -d $HOME/.config/op/plugins.sh ]; then
+    source $HOME/.config/op/plugins.sh
+fi
