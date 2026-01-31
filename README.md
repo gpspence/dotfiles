@@ -14,11 +14,11 @@ Designed to be portable, explicit, and safe to use on work machines.
 * No secrets, tokens, or host-specific assumptions
 * Optional tools are detected at runtime and degrade gracefully if missing.
 
-Managing & installing
+## Managing & installing
 
 These dotfiles are intended to be managed with chezmoi.
 
-Using chezmoi:
+### Using chezmoi:
 
 ```
 chezmoi init <repo>
