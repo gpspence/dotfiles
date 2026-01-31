@@ -24,3 +24,6 @@ These dotfiles are intended to be managed with chezmoi.
 chezmoi init <repo>
 chezmoi apply
 ```
+
+## References
+Modified from [jonhoo/configs](https://github.com/jonhoo/configs)
