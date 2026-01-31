@@ -1,9 +1,8 @@
 # Dotfiles
 
-Minimal personal dotfiles focused on a predictable Neovim workflow and sane defaults.
-Designed to be portable, explicit, and safe to use on work machines.
+A minimal personal dotfiles repository.
 
-## What’s here
+## Dotfiles Contained
 
 * Neovim (Lua-based) config with lazy.nvim for plugin management
   * fzf-lua for navigation
@@ -24,6 +23,10 @@ These dotfiles are intended to be managed with chezmoi.
 chezmoi init <repo>
 chezmoi apply
 ```
+
+### Dependencies
+* fzf
+* neovim
 
 ## References
 Modified from [jonhoo/configs](https://github.com/jonhoo/configs)
