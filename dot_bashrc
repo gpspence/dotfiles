@@ -34,23 +34,16 @@ if ! shopt -oq posix; then
   fi
 fi
 
-# Allow vi keybinds to be used directly in terminal
-set -o vi
-
 # --- ALIASES ---
 # User specific aliases and functions
-if [ -d ~/.bashrc.d ]; then
-    for rc in ~/.bashrc.d/*; do
-        if [ -f "$rc" ]; then
-            . "$rc"
-        fi
-    done
+if [ -d ~/.bash_aliases ]; then
+	. ~/.bash_aliases
 fi
 unset rc
 
 # --- STARTUP PROGRAMS ---
 if command -v fastfetch >/dev/null 2>&1; then
-  fastfetch --logo "$HOME/Pictures/FastfetchArt/ascii-dragon" 2>/dev/null
+  fastfetch
 fi
 # Use 1password CLI if available
 if [ -d $HOME/.config/op/plugins.sh ]; then
