@@ -11,18 +11,6 @@ vim.g.mapleader = " "
 vim.opt.foldenable = false
 vim.opt.foldmethod = 'manual'
 vim.opt.foldlevelstart = 99
--- very basic "continue indent" mode (autoindent) is always on in neovim
--- could try smartindent/cindent, but meh.
--- vim.opt.cindent = true
--- XXX
--- vim.opt.cmdheight = 2
--- vim.opt.completeopt = 'menuone,noinsert,noselect'
--- not setting updatedtime because I use K to manually trigger hover effects
--- and lowering it also changes how frequently files are written to swap.
--- vim.opt.updatetime = 300
--- if key combos seem to be "lagging"
--- http://stackoverflow.com/questions/2158516/delay-before-o-opens-a-new-line
--- vim.opt.timeoutlen = 300
 -- keep more context on screen while scrolling
 vim.opt.scrolloff = 2
 -- never show me line breaks if they're not there
@@ -39,7 +27,7 @@ vim.opt.splitbelow = true
 -- infinite undo!
 -- NOTE: ends up in ~/.local/state/nvim/undo/
 vim.opt.undofile = true
---" Decent wildmenu
+-- Decent wildmenu (command line completion)
 -- in completion, when there is more than one match,
 -- list all matches, and only complete to longest common match
 vim.opt.wildmode = 'list:longest'
@@ -116,8 +104,8 @@ vim.keymap.set('', 'L', '$')
 -- <leader>c will copy entire buffer into clipboard in normal mode
 vim.keymap.set('n', '<leader>p', '<cmd>read !wl-paste<cr>')
 vim.keymap.set('n', '<leader>c', '<cmd>w !wl-copy<cr>')
--- <leader>c will copy entire buffer into clipboard in visual mode
-vim.keymap.set('v', '<leader>c', ':w !wl-copy<CR>')
+-- <leader>c will copy selection into clipboard in visual mode
+vim.keymap.set('v', '<leader>c', '"+y')
 -- <leader><leader> toggles between buffers
 vim.keymap.set('n', '<leader><leader>', '<c-^>')
 -- <leader>, shows/hides hidden characters
@@ -226,7 +214,6 @@ vim.api.nvim_create_autocmd('Filetype', {
 	group = text,
 	command = 'setlocal spell tw=80 colorcolumn=81',
 })
--- TODO: no autocomplete in text
 
 -------------------------------------------------------------------------------
 --
@@ -270,18 +257,7 @@ require("lazy").setup({
 				extend_background_behind_borders = true,
 				enable = { terminal = true, legacy_highlights = true, migrations = true },
 				styles = { bold = true, italic = false, transparency = false },
-				groups = {
-					border = "muted",
-					link = "iris",
-					panel = "surface",
-
-					error = "love",
-					hint  = "iris",
-					info  = "foam",
-					note  = "pine",
-					todo  = "rose",
-					warn  = "gold",
-				},
+				groups = { border = "muted", link = "iris", panel = "surface", error = "love", hint  = "iris", info  = "foam", note  = "pine", todo  = "rose", warn  = "gold", },
 			})
 		end,
 	},
@@ -409,27 +385,36 @@ require("lazy").setup({
 					["--layout"] = "default",
 				},
 			}
-			-- when using C-p for quick file open, pass the file list through
-			--
-			--   https://github.com/jonhoo/proximity-sort
-			--
-			-- to prefer files closer to the current file.
-			vim.keymap.set('', '<C-p>', function()
-				opts = {}
-				opts.cmd = 'fd --color=never --hidden --type f --type l --exclude .git'
-				local base = vim.fn.fnamemodify(vim.fn.expand('%'), ':h:.:S')
-				if base ~= '.' then
-					-- if there is no current file,
-					-- proximity-sort can't do its thing
-					opts.cmd = opts.cmd .. (" | proximity-sort %s"):format(vim.fn.shellescape(vim.fn.expand('%')))
+			-- git root search compatibility
+			local function git_root()
+				local out = vim.fn.systemlist("git rev-parse --show-toplevel")
+				if vim.v.shell_error == 0 and out[1] and out[1] ~= "" then
+					return out[1]
 				end
-				opts.fzf_opts = {
-				  ['--scheme']    = 'path',
-				  ['--tiebreak']  = 'index',
-				  ["--layout"]    = "default",
-				}
-				require'fzf-lua'.files(opts)
-			end)
+				return vim.loop.cwd()
+			end
+			-- add keybind
+			vim.keymap.set('', '<C-p>', function()
+				local cmd
+				if vim.fn.executable("fd") == 1 then
+					cmd = "fd --color=never --hidden --type f --type l --exclude .git"
+				elseif vim.fn.executable("fdfind") == 1 then
+					cmd = "fdfind --color=never --hidden --type f --type l --exclude .git"
+				else
+					cmd = "find . \\( -type f -o -type l \\) -print | sed 's|^\\./||' | grep -v '^.git/'"
+				end
+
+				require'fzf-lua'.files({
+					cwd = git_root(),
+					cmd = cmd,
+					fzf_opts = {
+						['--scheme']    = 'path',
+						['--tiebreak']  = 'index',
+						["--layout"]    = "default",
+					}
+				})
+				end
+			)
 			-- use fzf to search buffers as well
 			vim.keymap.set('n', '<leader>;', function()
 				require'fzf-lua'.buffers({
@@ -452,35 +437,6 @@ require("lazy").setup({
 		config = function()
 			-- Setup language servers.
 
-			-- Rust
-			vim.lsp.config('rust_analyzer', {
-				-- Server-specific settings. See `:help lspconfig-setup`
-				settings = {
-					["rust-analyzer"] = {
-						cargo = {
-							features = "all",
-						},
-						checkOnSave = {
-							enable = true,
-						},
-						check = {
-							command = "clippy",
-						},
-						imports = {
-							group = {
-								enable = false,
-							},
-						},
-						completion = {
-							postfix = {
-								enable = false,
-							},
-						},
-					},
-				},
-			})
-			vim.lsp.enable('rust_analyzer')
-
 			-- Bash LSP
 			if vim.fn.executable('bash-language-server') == 1 then
 				vim.lsp.enable('bashls')
@@ -496,9 +452,14 @@ require("lazy").setup({
 				vim.lsp.enable('ruff')
 			end
 
-			-- nil for nix
-			if vim.fn.executable('nil') == 1 then
-				vim.lsp.enable('nil_ls')
+			-- tsserver for typescript
+			if vim.fn.executable('typescript-language-server') == 1 then
+				vim.lsp.enable('ts_ls')
+			end
+
+			-- eslint
+			if vim.fn.executable('vscode-eslint-language-server') == 1 then
+			  vim.lsp.enable('eslint')
 			end
 
 			-- Global mappings.
@@ -547,17 +508,6 @@ require("lazy").setup({
 					-- None of this semantics tokens business.
 					-- https://www.reddit.com/r/neovim/comments/143efmd/is_it_possible_to_disable_treesitter_completely/
 					client.server_capabilities.semanticTokensProvider = nil
-
-					-- format on save for Rust
-					if client.server_capabilities.documentFormattingProvider then
-						vim.api.nvim_create_autocmd("BufWritePre", {
-							group = vim.api.nvim_create_augroup("RustFormat", { clear = true }),
-							buffer = bufnr,
-							callback = function()
-								vim.lsp.buf.format({ bufnr = bufnr })
-							end,
-						})
-					end
 				end,
 			})
 		end
@@ -652,8 +602,6 @@ require("lazy").setup({
 			vim.g.vimtex_mappings_enabled = false
 		end
 	},
-	-- fish
-	'khaveesh/vim-fish-syntax',
 	-- markdown
 	{
 		'plasticboy/vim-markdown',
@@ -680,7 +628,7 @@ require("lazy").setup({
 -- cosmetic function configuration
 --
 -------------------------------------------------------------------------------
-local function minor_theme_tweaks()
+local function theme_tweaks()
 	-- Less visible window separator
 	vim.api.nvim_set_hl(0, "WinSeparator", { fg = 1250067 })
 	-- Make comments more prominent (copy Boolean highlight)
@@ -701,21 +649,11 @@ local function apply_theme_tweaks(theme)
 	if theme == "gruvbox" then
 		vim.cmd([[colorscheme gruvbox-dark-hard]])
 		vim.o.background = "dark"
-		minor_theme_tweaks()
+		theme_tweaks()
 	elseif theme == "rose-pine" then
 		vim.cmd("colorscheme rose-pine")
-		minor_theme_tweaks()
+		theme_tweaks()
 	end
-end
-
-local function set_gruvbox()
-  vim.cmd("colorscheme gruvbox-dark-hard")
-  apply_theme_tweaks("gruvbox")
-end
-
-local function set_rose_pine()
-  -- setup must run before colorscheme for rose-pine
-  apply_theme_tweaks("rose-pine")
 end
 
 -- Reapply tweaks after ANY colorscheme is loaded (covers manual :colorscheme too)
@@ -734,13 +672,13 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 local function toggle_theme()
   local cs = vim.g.colors_name or ""
   if cs:find("rose%-pine") then
-    set_gruvbox()
+	apply_theme_tweaks("gruvbox")
   else
-    set_rose_pine()
+	apply_theme_tweaks("rose-pine")
   end
 end
 
 -- Default theme on startup
-set_rose_pine()
+apply_theme_tweaks("rose-pine")
 
 vim.keymap.set("n", "<leader>ct", toggle_theme, { desc = "Toggle theme" })
