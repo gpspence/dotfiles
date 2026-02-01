@@ -452,6 +452,19 @@ require("lazy").setup({
 				vim.lsp.enable('ruff')
 			end
 
+			-- Pyright for Python
+			vim.lsp.config('pyright', {
+				settings = {
+					python = {
+						analysis = {
+							diagnosticMode = "openFilesOnly", -- optional
+							typeCheckingMode = "basic",
+						},
+					},
+				},
+			})
+			vim.lsp.enable('pyright')
+
 			-- tsserver for typescript
 			if vim.fn.executable('typescript-language-server') == 1 then
 				vim.lsp.enable('ts_ls')
